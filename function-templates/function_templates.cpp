@@ -1,7 +1,9 @@
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/catch_approx.hpp>
 #include <iostream>
 #include <string>
 #include <vector>
+#include <list>
 
 using namespace std::literals;
 
@@ -99,7 +101,7 @@ TEST_CASE("default param")
     CHECK(ver_5::max_value(42, 42.1) == 42.1);
     CHECK(ver_5::max_value("abc", "def"s) == "def"s);
 
-    CHECK(ver_5::max_value<float, int, double>(42.1, 42) == 42.1);
+    CHECK(ver_5::max_value<float, int, double>(42.1, 42) == Catch::Approx(42.1));
 }
 
 TEST_CASE("tuned trait for float")
@@ -107,4 +109,47 @@ TEST_CASE("tuned trait for float")
     auto result = ver_4::max_value(4.0f, 4.1f);
 
     static_assert(std::is_same_v<decltype(result), double>);
+}
+
+///////////////////////////////////////////////////////////////////////
+
+namespace Training
+{
+    template <typename Iter, typename Function>
+    void foreach(Iter first, Iter last, Function f)
+    {
+        for (Iter it = first; it != last; ++it)
+            f(*it);
+    }
+
+    template <typename TContainer>
+    auto begin(TContainer& container)
+    {
+        return container.begin();
+    }
+
+    template <typename TContainer>
+    auto end(TContainer& container)
+    {
+        return container.end();
+    }
+
+    template <typename T, size_t N>
+    auto begin(T (&tab)[N])
+    {
+        return &tab[0];
+    }
+
+    template <typename T, size_t N>
+    auto end(T (&tab)[N])
+    {
+        return &tab[0] + N;
+    }
+}
+
+TEST_CASE("foreach")
+{
+    int vec[] = {1, 2, 3, 4};
+
+    Training::foreach(Training::begin(vec), Training::end(vec), [](int n) { std::cout << n << "\n"; });
 }
