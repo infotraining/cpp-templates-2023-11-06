@@ -158,6 +158,11 @@ std::string bar()
     return "abc"s;
 }
 
+std::string bar2(int n)
+{
+    return std::to_string(n);
+}
+
 std::string& foobar()
 {
     static std::string str = "def";
@@ -165,16 +170,17 @@ std::string& foobar()
     return str;
 }
 
-template <typename F>
-decltype(auto) call(F f)
+template <typename F, typename... TArgs>
+decltype(auto) call(F f, TArgs&&... args)
 {
     std::cout << "calling f!!!\n";
-    return f();
+    return f(std::forward<TArgs>(args)...);
 }
 
 TEST_CASE("call wrapper")
 {
     std::string result = call(bar); // std::string
+    result = call(bar2, 10);
 
     std::string& ref_result = call(foobar); // std::string&
 }
