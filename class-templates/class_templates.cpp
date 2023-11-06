@@ -2,6 +2,8 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <map>
+#include <numbers>
 
 using namespace std::literals;
 
@@ -200,4 +202,29 @@ TEST_CASE("vector<bool>")
     flags[0] = true;
 
     flags.flip();
+}
+
+///////////////////////////////////////////////////////////
+// alias template
+
+template <typename T>
+using Dictionary = std::map<std::string, T>;
+
+TEST_CASE("alias templates")
+{
+    Dictionary<int> dict1 = {{"one", 1}, {"two", 2}, {"three", 3}};
+}
+
+///////////////////////////////////////////////////////////
+// template  variables
+
+template <typename T>
+constexpr T pi(3.14159265359);
+
+TEST_CASE("template variables")
+{
+    std::cout << "pi<double>:" << pi<double> << "\n";
+    std::cout << "pi<float>:" << pi<float> << "\n";
+    
+    std::cout << "std::pi_v<double>: " << std::numbers::pi_v<double> << "\n";
 }
