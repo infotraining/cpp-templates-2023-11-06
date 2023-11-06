@@ -115,10 +115,10 @@ TEST_CASE("tuned trait for float")
 
 namespace Training
 {
-    template <typename Iter, typename Function>
-    void foreach(Iter first, Iter last, Function f)
+    template <typename InputIter, typename Function>
+    void foreach (InputIter first, InputIter last, Function f)
     {
-        for (Iter it = first; it != last; ++it)
+        for (InputIter it = first; it != last; ++it)
             f(*it);
     }
 
