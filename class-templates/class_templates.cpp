@@ -95,19 +95,19 @@ struct Pair
     T1 first;
     T2 second;
 
-    //template <typename U1, typename U2>
-    //Pair(U1&& f, U2&& s)
-    //    : first{std::forward<U1>(f)}
-    //    , second{std::forward<U2>(s)}
+    // template <typename U1, typename U2>
+    // Pair(U1&& f, U2&& s)
+    //     : first{std::forward<U1>(f)}
+    //     , second{std::forward<U2>(s)}
     //{
-    //}
+    // }
 
     template <typename U1, typename U2>
-    Pair(U1&& f, U2&& s);        
+    Pair(U1&& f, U2&& s);
 };
 
 template <typename T1, typename T2>
-    template <typename U1, typename U2>
+template <typename U1, typename U2>
 Pair<T1, T2>::Pair(U1&& f, U2&& s)
     : first{std::forward<U1>(f)}
     , second{std::forward<U2>(s)}
@@ -136,4 +136,68 @@ TEST_CASE("Pair")
     // Class-Template Argument Deduction - CTAD
     Pair p3{1, 4.44};         // Pair<int, double>
     Pair p4{"text", "text"s}; // Pair<const char*, std::string> p4
+}
+
+// partial specialization
+template <typename T>
+struct Pair<T, T>
+{
+    T first, second;
+
+    template <typename U1, typename U2>
+    Pair(U1&& f, U2&& s)
+        : first{std::forward<U1>(f)}
+        , second{std::forward<U2>(s)}
+    {
+    }
+
+    const T& max_value() const
+    {
+        return first < second ? second : first;
+    }
+};
+
+TEST_CASE("partial specialization")
+{
+    Pair<int, int> p1(42, 665);
+    CHECK(p1.max_value() == 665);
+
+    Pair p2{3.14, 66.5};
+    CHECK(p2.max_value() == 66.5);
+}
+
+// full specialization
+template <>
+struct Pair<const char*, const char*>
+{
+    std::string first;
+    std::string second;
+
+    Pair(const std::string& f, const std::string& s)
+        : first{f}
+        , second{s}
+    {
+    }
+
+    const std::string& max_value() const
+    { 
+        return first < second ? second : first;
+    }
+};
+
+TEST_CASE("full specialization")
+{
+    Pair p1{"ala", "ola"};
+    static_assert(std::is_same_v<decltype(p1.first), std::string>);
+
+    CHECK(p1.max_value() == "ola");
+}
+
+TEST_CASE("vector<bool>")
+{ 
+    std::vector<bool> flags = {0, 1, 1, 0};
+
+    flags[0] = true;
+
+    flags.flip();
 }
