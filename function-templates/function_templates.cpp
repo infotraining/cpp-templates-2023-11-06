@@ -45,6 +45,14 @@ namespace ver_2
     {
         return a < b ? b : a;
     }
+
+    namespace Cpp20
+    {
+        auto max_value(auto a, auto b)
+        { 
+            return a < b ? b : a;
+        }
+    }
 }
 
 TEST_CASE("many params")
