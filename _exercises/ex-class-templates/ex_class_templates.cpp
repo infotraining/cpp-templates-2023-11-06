@@ -137,6 +137,64 @@ Stack<T, Container>::Stack(const Stack<TOtherElement, TOtherContainer>& other)
 static_assert(std::is_same_v<Stack<int>::container_type, std::deque<int>>);
 static_assert(std::is_same_v<Stack<int, std::vector<int>>::container_type, std::vector<int>>);
 
+namespace TemplateAsTemplateParam
+{
+    template <typename T, template <typename V, typename Allocator> class Container = std::deque, typename TAllocator = std::allocator<T>>
+    class Stack
+    {
+        Container<T, TAllocator> items_;
+
+        template <typename U, template <typename V, typename Allocator> class UContainer, typename UAllocator>
+        friend class Stack;
+
+    public:
+        using value_type = T;
+        using reference = T&;
+        using const_reference = const T&;
+        using container_type = Container<T, TAllocator>;
+
+        Stack() = default;
+
+        template <std::convertible_to<T> U, template <typename V, typename Allocator> class UContainer, typename UAllocator>
+        Stack(const Stack<U, UContainer, UAllocator>& other)
+            : items_(other.items_.begin(), other.items_.end())
+        {
+        }
+
+        bool empty() const
+        {
+            return items_.empty();
+        }
+
+        size_t size() const
+        {
+            return items_.size();
+        }
+
+        template <typename TItem>
+        void push(TItem&& item)
+            requires std::constructible_from<T, TItem>
+        {
+            items_.push_back(std::forward<TItem>(item));
+        }
+
+        const_reference top() const
+        {
+            return items_.back();
+        }
+
+        void pop(reference item)
+        {
+            item = std::move(items_.back());
+            items_.pop_back();
+        }
+    };
+
+    static_assert(std::is_same_v<Stack<int>::container_type, std::deque<int>>);
+    static_assert(std::is_same_v<Stack<int, std::vector>::container_type, std::vector<int>>);
+} // namespace TemplateAsTemplateParam
+
+
 TEST_CASE("After construction", "[stack]")
 {
     Stack<int> s;
@@ -272,25 +330,25 @@ TEST_CASE("Copy & conversion", "[stack,copy,conversion]")
 
 TEST_CASE("Copy & different containers", "[stack,copy,conversion]")
 {
-    Stack<int, std::deque<int>> s_ints;
+    TemplateAsTemplateParam::Stack<int, std::deque> s_ints;
 
     s_ints.push(1);
     s_ints.push(2);
     s_ints.push(3);
 
-    Stack<int, std::vector<int>> s_ints_with_vec = s_ints;
+    TemplateAsTemplateParam::Stack<int, std::vector> s_ints_with_vec = s_ints;
 
     REQUIRE(pop_all(s_ints_with_vec) == std::vector{3, 2, 1});
 }
 
 TEST_CASE("Copy & different containers with convertible types", "[stack,copy,conversion]")
 {
-    Stack<int, std::deque<int>> s_ints;
+    TemplateAsTemplateParam::Stack<int, std::deque> s_ints;
     s_ints.push(1);
     s_ints.push(2);
     s_ints.push(3);
 
-    Stack<double, std::vector<double>> s_doubles_with_vec = s_ints;
+    TemplateAsTemplateParam::Stack<double, std::vector> s_doubles_with_vec = s_ints;
 
     REQUIRE(pop_all(s_doubles_with_vec) == std::vector{3.0, 2.0, 1.0});
 }
