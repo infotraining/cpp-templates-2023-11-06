@@ -164,9 +164,7 @@ template <typename, typename = void>
 constexpr bool is_iterable{}; // false
 
 template <typename T>
-constexpr bool is_iterable<T, std::void_t<decltype(std::declval<T>().begin()), decltype(std::declval<T>().end())>>
-    = true;
-
+constexpr bool is_iterable<T, std::void_t<decltype(std::declval<T>().begin()), decltype(std::declval<T>().end())>> = true;
 
 template <typename T, typename = std::enable_if_t<!is_iterable<T>>>
 void print(const T& value)
