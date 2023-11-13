@@ -9,6 +9,7 @@
 #include <list>
 #include <memory>
 #include <numeric>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -18,165 +19,297 @@
 
 using Catch::Matchers::Equals;
 
-// TODO: implement Stack class template
+template <typename T, typename Container = std::deque<T>>
+class Stack
+{
+public:
+    using value_type = T;
+    using reference = T&;
+    using iterator = typename Container::const_iterator;
+    using const_reference = const T&;
+    using container_type = Container;
+    using size_type = typename Container::size_type;
 
-// static_assert(std::is_same_v<Stack<int>::container_type, std::deque<int>>);
-// static_assert(std::is_same_v<Stack<int, std::vector<int>>::container_type, std::vector<int>>);
+    Stack() = default;
 
-// TEST_CASE("After construction", "[stack]")
-// {
-//     Stack<int> s;
+    Stack(const Stack& other) = default;
+    Stack& operator=(const Stack& other) = default;
+    Stack(Stack&& other) = default;
+    Stack& operator=(Stack&& other) = default;
 
-//     SECTION("is empty")
-//     {
-//         REQUIRE(s.empty());
-//     }
+    template <typename TOtherElement, typename TOtherContainer>
+    friend class Stack;
 
-//     SECTION("size is zero")
-//     {
-//         REQUIRE(s.size() == 0);
-//     }
-// }
+    template <typename TOtherElement, typename TOtherContainer>
+    Stack(const Stack<TOtherElement, TOtherContainer>& other);
 
-// TEST_CASE("Pushing an item", "[stack,push]")
-// {
-//     Stack<int> s;
+    // void push(const value_type& value) // cc
+    // {
+    //     container_.push_back(value);
+    // }
 
-//     SECTION("is no longer empty")
-//     {
-//         s.push(1);
+    // void push(value_type&& value) // mv
+    // {
+    //     container_.push_back(std::move(value));
+    // }
 
-//         REQUIRE(!s.empty());
-//     }
+    // template <typename TValue>
+    // void push(TValue&& value)
+    // {
+    //     container_.push_back(std::forward<TValue>(value));
+    // }
 
-//     SECTION("size is increased")
-//     {
-//         auto size_before = s.size();
+    void push(auto&& value)
+    {
+        container_.push_back(std::forward<decltype(value)>(value));
+    }
 
-//         s.push(1);
+    // template <typename... TArgs>
+    // void emplace(TArgs&&... args)
+    // {
+    //     container_.emplace_back(std::forward<TArgs>(args)...);
+    // }
 
-//         REQUIRE(s.size() - size_before == 1);
-//     }
+    void emplace(auto&&... args)
+    {
+        container_.emplace_back(std::forward<decltype(args)>(args)...);
+    }
 
-//     SECTION("recently pushed item is on a top")
-//     {
-//         s.push(4);
+    void pop(reference value)
+    {
+        if (container_.empty())
+        {
+            throw std::out_of_range("Stack is empty");
+        }
+        value = container_.back();
+        container_.pop_back();
+    }
 
-//         REQUIRE(s.top() == 4);
-//     }
-// }
+    reference top()
+    {
+        if (container_.empty())
+        {
+            throw std::out_of_range("Stack is empty");
+        }
+        return container_.back();
+    }
 
-// template <typename TStack>
-// std::vector<typename TStack::value_type> pop_all(TStack& s)
-// {
-//     std::vector<typename TStack::value_type> values(s.size());
+    const_reference top() const
+    {
+        if (container_.empty())
+        {
+            throw std::out_of_range("Stack is empty");
+        }
+        return container_.back();
+    }
 
-//     for (auto& item : values)
-//         s.pop(item);
+    bool empty() const noexcept
+    {
+        return container_.empty();
+    }
 
-//     return values;
-// }
+    size_type size() const noexcept
+    {
+        return container_.size();
+    }
 
-// TEST_CASE("Popping an item", "[stack,pop]")
-// {
-//     Stack<int> s;
+private:
+    Container container_;
 
-//     s.push(1);
-//     s.push(4);
+    iterator begin() const
+    {
+        return std::begin(container_);
+    }
 
-//     int item;
+    iterator end() const
+    {
+        return std::end(container_);
+    }
+};
 
-//     SECTION(" an item from a top to an argument passed by ref")
-//     {
-//         s.pop(item);
+template <typename T, typename Container>
+template <typename TOtherElement, typename TOtherContainer>
+Stack<T, Container>::Stack(const Stack<TOtherElement, TOtherContainer>& other)
+    : container_{other.begin(), other.end()}
+{
+}
 
-//         REQUIRE(item == 4);
-//     }
+static_assert(std::is_same_v<Stack<int>::container_type, std::deque<int>>);
+static_assert(std::is_same_v<Stack<int, std::vector<int>>::container_type, std::vector<int>>);
 
-//     SECTION("size is decreased")
-//     {
-//         size_t size_before = s.size();
+TEST_CASE("After construction", "[stack]")
+{
+    Stack<int> s;
 
-//         s.pop(item);
+    SECTION("is empty")
+    {
+        REQUIRE(s.empty());
+    }
 
-//         REQUIRE(size_before - s.size() == 1);
-//     }
+    SECTION("size is zero")
+    {
+        REQUIRE(s.size() == 0);
+    }
+}
 
-//     SECTION("LIFO order")
-//     {
-//         int a, b;
+TEST_CASE("Pushing an item", "[stack,push]")
+{
+    Stack<int> s;
 
-//         s.pop(a);
-//         s.pop(b);
+    SECTION("is no longer empty")
+    {
+        s.push(1);
 
-//         REQUIRE(a == 4);
-//         REQUIRE(b == 1);
-//     }
-// }
+        REQUIRE(!s.empty());
+    }
 
-// TEST_CASE("Copy semantics", "[stack,copy]")
-// {
-//     Stack<std::string> s;
-//     s.push("txt1");
-//     s.push("txt2");
-//     s.push("txt3");
+    SECTION("size is increased")
+    {
+        auto size_before = s.size();
 
-//     SECTION("copy constructor", "[stack,copy]")
-//     {
-//         Stack<std::string> copy_s = s;
+        s.push(1);
 
-//         REQUIRE_THAT(pop_all(copy_s), Equals(std::vector<std::string>{"txt3", "txt2", "txt1"}));
-//     }
+        REQUIRE(s.size() - size_before == 1);
+    }
 
-//     SECTION("copy assignment", "[stack,copy]")
-//     {
-//         SECTION("when the same capacity")
-//         {
-//             Stack<std::string> target;
-//             target.push("x");
-//             REQUIRE(target.size() == 1);
+    SECTION("recently pushed item is on a top")
+    {
+        s.push(4);
 
-//             target = s;
-//             REQUIRE(target.size() == 3);
+        REQUIRE(s.top() == 4);
+    }
+}
 
-//             REQUIRE_THAT(pop_all(target), Equals(std::vector<std::string>{"txt3", "txt2", "txt1"}));
-//         }
-//     }
-// }
+template <typename TStack>
+std::vector<typename TStack::value_type> pop_all(TStack& s)
+{
+    std::vector<typename TStack::value_type> values(s.size());
 
-// TEST_CASE("Copy & conversion", "[stack,copy,conversion]")
-// {
-//     Stack<int> s_ints;
-//     s_ints.push(1);
-//     s_ints.push(2);
-//     s_ints.push(3);
+    for (auto& item : values)
+        s.pop(item);
 
-//     Stack<double> s_doubles = s_ints;
+    return values;
+}
 
-//     REQUIRE_THAT(pop_all(s_doubles), Equals(std::vector<double>{3.0, 2.0, 1.0}));
-// }
+TEST_CASE("Popping an item", "[stack,pop]")
+{
+    Stack<int> s;
 
-// TEST_CASE("Copy & different containers", "[stack,copy,conversion]")
-// {
-//     Stack<int, std::deque<int>> s_ints;
+    s.push(1);
+    s.push(4);
 
-//     s_ints.push(1);
-//     s_ints.push(2);
-//     s_ints.push(3);
+    int item;
 
-//     Stack<int, std::vector<int>> s_ints_with_vec = s_ints;
+    SECTION(" an item from a top to an argument passed by ref")
+    {
+        s.pop(item);
 
-//     REQUIRE(pop_all(s_ints_with_vec) == std::vector{3, 2, 1});
-// }
+        REQUIRE(item == 4);
+    }
 
-// TEST_CASE("Copy & different containers with convertible types", "[stack,copy,conversion]")
-// {
-//     Stack<int, std::deque<int>> s_ints;
-//     s_ints.push(1);
-//     s_ints.push(2);
-//     s_ints.push(3);
+    SECTION("size is decreased")
+    {
+        size_t size_before = s.size();
 
-//     Stack<double, std::vector<double>> s_doubles_with_vec = s_ints;
+        s.pop(item);
 
-//     REQUIRE(pop_all(s_doubles_with_vec) == std::vector{3.0, 2.0, 1.0});
-// }
+        REQUIRE(size_before - s.size() == 1);
+    }
+
+    SECTION("LIFO order")
+    {
+        int a, b;
+
+        s.pop(a);
+        s.pop(b);
+
+        REQUIRE(a == 4);
+        REQUIRE(b == 1);
+    }
+}
+
+TEST_CASE("Copy semantics", "[stack,copy]")
+{
+    Stack<std::string> s;
+    s.push("txt1");
+    s.push("txt2");
+    s.push("txt3");
+
+    SECTION("copy constructor", "[stack,copy]")
+    {
+        Stack<std::string> copy_s = s;
+
+        REQUIRE_THAT(pop_all(copy_s), Equals(std::vector<std::string>{"txt3", "txt2", "txt1"}));
+    }
+
+    SECTION("copy assignment", "[stack,copy]")
+    {
+        SECTION("when the same capacity")
+        {
+            Stack<std::string> target;
+            target.push("x");
+            REQUIRE(target.size() == 1);
+
+            target = s;
+            REQUIRE(target.size() == 3);
+
+            REQUIRE_THAT(pop_all(target), Equals(std::vector<std::string>{"txt3", "txt2", "txt1"}));
+        }
+    }
+}
+
+TEST_CASE("Copy & conversion", "[stack,copy,conversion]")
+{
+    Stack<int> s_ints;
+    s_ints.push(1);
+    s_ints.push(2);
+    s_ints.push(3);
+
+    Stack<double> s_doubles = s_ints;
+
+    REQUIRE_THAT(pop_all(s_doubles), Equals(std::vector<double>{3.0, 2.0, 1.0}));
+}
+
+TEST_CASE("Copy & different containers", "[stack,copy,conversion]")
+{
+    Stack<int, std::deque<int>> s_ints;
+
+    s_ints.push(1);
+    s_ints.push(2);
+    s_ints.push(3);
+
+    Stack<int, std::vector<int>> s_ints_with_vec = s_ints;
+
+    REQUIRE(pop_all(s_ints_with_vec) == std::vector{3, 2, 1});
+}
+
+TEST_CASE("Copy & different containers with convertible types", "[stack,copy,conversion]")
+{
+    Stack<int, std::deque<int>> s_ints;
+    s_ints.push(1);
+    s_ints.push(2);
+    s_ints.push(3);
+
+    Stack<double, std::vector<double>> s_doubles_with_vec = s_ints;
+
+    REQUIRE(pop_all(s_doubles_with_vec) == std::vector{3.0, 2.0, 1.0});
+}
+
+TEST_CASE("generic lambda - C++20")
+{
+    using T = std::string;
+
+    std::vector<T> vec;
+
+    auto pusher1 = [&vec](auto&& item) {
+        vec.push_back(std::forward<decltype(item)>(item));
+    };
+
+    auto pusher2 = [&vec]<typename TItem>(TItem&& item) {
+        vec.push_back(std::forward<TItem>(item));
+    };
+
+    auto pusher3 = []<typename T>(std::vector<T>& vec, T&& item) {
+        vec.push_back(std::forward<T>(item));
+    };
+}
