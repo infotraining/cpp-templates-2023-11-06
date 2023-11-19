@@ -60,6 +60,11 @@ auto do_stuff(const T& obj) -> std::enable_if_t<(sizeof(T) > 8)> // for big obje
     std::cout << __PRETTY_FUNCTION__ << "\n";
 }
 
+namespace Cpp20
+{
+    
+}
+
 namespace AlternativeTake
 {
     template <typename T, typename = std::enable_if_t<(sizeof(T) <= 8)>>
