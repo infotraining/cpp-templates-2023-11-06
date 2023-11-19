@@ -3,6 +3,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <cmath>
 
 using namespace std::literals;
 
@@ -73,14 +74,8 @@ namespace AlternativeTake
         std::cout << __PRETTY_FUNCTION__ << "\n";
     }
 
-    template <typename T, typename = void, typename = std::enable_if_t<(sizeof(T) > 8 && sizeof(T) <= 16)>>
+    template <typename T, typename = void, typename = std::enable_if_t<(sizeof(T) > 8)>>
     void do_stuff(const T& obj)
-    {
-        std::cout << __PRETTY_FUNCTION__ << "\n";
-    }
-
-    template <typename T, typename = void, typename = std::enable_if_t<(sizeof(T) > 16)>>
-    void do_stuff(std::shared_ptr<T> ptr)
     {
         std::cout << __PRETTY_FUNCTION__ << "\n";
     }
@@ -100,8 +95,6 @@ TEST_CASE("SFINAE + enable_if")
     std::vector<int> vec = {1, 2, 3, 4};
 
     AlternativeTake::do_stuff(vec);
-
-    AlternativeTake::do_stuff(std::make_shared<Data>());
 }
 
 /////////////////////////////////////////////////////////////////////////
