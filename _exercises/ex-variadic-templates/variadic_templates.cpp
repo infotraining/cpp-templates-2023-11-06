@@ -115,6 +115,10 @@ TEST_CASE("call_n_times wrapper")
     REQUIRE(counter == 5);
     REQUIRE(results.size() == 5);
     REQUIRE(std::all_of(begin(results), end(results), [](const auto& item) { return item == std::make_tuple(1, "one"s); }));
+
+    constexpr size_t N = 10;
+
+    using Indexes = std::make_index_sequence<N>;
 }
 
 ///////////////////////////////////////////////
@@ -161,7 +165,9 @@ namespace vt
 {
     template <typename T>
     concept Hashable = requires(T obj) {
-        { std::hash<T>{}(obj) } -> std::convertible_to<size_t>;
+        {
+            std::hash<T>{}(obj)
+        } -> std::convertible_to<size_t>;
     };
 
     template <Hashable T>
@@ -170,8 +176,8 @@ namespace vt
         seed ^= hash<T>{}(value) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
     }
 
-    template<Hashable... T>
-    auto combined_hash(const T&...args)
+    template <Hashable... T>
+    auto combined_hash(const T&... args)
     {
         uint32_t seed{0};
         (hash_combine(seed, args), ...);
@@ -181,13 +187,41 @@ namespace vt
 
 TEST_CASE("combined_hash - write a function that calculates combined hash value for a given number of arguments")
 {
-    #ifdef _MSC_VER
-        CHECK(vt::combined_hash(1U) == 2577477565);
-        CHECK(vt::combined_hash(1, 3.14, "string"s) == 2865319663);
-        CHECK(vt::combined_hash(123L, "abc"sv, 234, 3.14f) == 1326321790);
-    #else
-        CHECK(combined_hash(1U) == 2654435770U);
-        CHECK(combined_hash(1, 3.14, "string"s) == 10365827363824479057U);
-        CHECK(combined_hash(123L, "abc"sv, 234, 3.14f) == 162170636579575197U);
-    #endif
+#ifdef _MSC_VER
+    CHECK(vt::combined_hash(1U) == 2577477565);
+    CHECK(vt::combined_hash(1, 3.14, "string"s) == 2865319663);
+    CHECK(vt::combined_hash(123L, "abc"sv, 234, 3.14f) == 1326321790);
+#else
+    CHECK(combined_hash(1U) == 2654435770U);
+    CHECK(combined_hash(1, 3.14, "string"s) == 10365827363824479057U);
+    CHECK(combined_hash(123L, "abc"sv, 234, 3.14f) == 162170636579575197U);
+#endif
+}
+
+/////////////////////////////////////////////////////////////////////
+// index_sequence
+
+namespace vt
+{
+    namespace details
+    {
+        template <typename F, typename Tpl, size_t... Indexes>
+        void tuple_apply_impl(F&& f, const Tpl& tpl, std::index_sequence<Indexes...> is)
+        {
+            (..., f(std::get<Indexes>(tpl)));
+        }
+    } // namespace details
+
+    template <typename F, typename... Ts>
+    void tuple_apply(F&& f, const std::tuple<Ts...>& tpl)
+    {
+        details::tuple_apply_impl(std::forward<F>(f), tpl, std::make_index_sequence<sizeof...(Ts)>{});
+    }
+}
+
+TEST_CASE("tuple_apply")
+{
+    std::tuple tpl{1, 3.14, "text"s};
+
+    vt::tuple_apply([](const auto& item) { std::cout << "item: " << item << "\n"; }, tpl);
 }
