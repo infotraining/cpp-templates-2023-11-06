@@ -13,7 +13,6 @@ namespace TODO
 {
     template <typename InputIter, typename Predicate>
     InputIter find_if(InputIter first, InputIter last, Predicate f)
-        requires requires { { f(*first) } -> std::convertible_to<bool>; }
     {
         for (InputIter it = first; it != last; ++it)
         {
