@@ -50,6 +50,13 @@ private:
 /////////////////////////////////////////////////////////////////
 // LockingPolicy
 //
+
+template <typename T>
+concept Lockable = requires(T lk) {
+    lk.lock();
+    lk.unlock();
+};
+
 class NullMutex
 {
 public:
@@ -72,7 +79,7 @@ using StdLock = std::mutex;
 template <
     typename T,
     typename RangeCheckPolicy,
-    typename LockingPolicy = NullMutex>
+    Lockable LockingPolicy = NullMutex>
 class Vector : public RangeCheckPolicy
 {
     std::vector<T> items_;

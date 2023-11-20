@@ -10,34 +10,60 @@ using namespace std;
 
 namespace vt
 {
-    // TODO - implement sum function that returns sum of all arguments
+    namespace HeadTail
+    {
+        template <typename THead>
+        auto sum(THead head)
+        {
+            return head;
+        }
+
+        template <typename THead, typename... TTail>
+        auto sum(THead head, TTail... tail)
+        {
+            return head + sum(tail...);
+        }
+    } // namespace HeadTail
+
+    template <typename... Ts>
+    auto sum(Ts... values)
+    {
+        return (... + values); // ((1 + 3) + 3) - left fold
+    }
+
+    template <typename... Ts>
+    auto sum_r(Ts... values)
+    {
+        return (values + ...); // ((1 + (3 + 3)) - right fold
+    }
+
 } // namespace vt
 
 TEST_CASE("variadic sum")
 {
-    // SECTION("for ints")
-    // {
-    //     auto sum = vt::sum(1, 3, 3);
+    SECTION("for ints")
+    {
+        auto sum = vt::sum(1, 3, 3);
 
-    //     REQUIRE(sum == 7);
-    //     static_assert(is_same<int, decltype(sum)>::value, "Error");
-    // }
+        REQUIRE(sum == 7);
+        static_assert(is_same<int, decltype(sum)>::value, "Error");
+    }
 
-    // SECTION("for floating points")
-    // {
-    //     auto dbl_sum = vt::sum(1.1, 3.0f, 3);
+    SECTION("for floating points")
+    {
+        auto dbl_sum = vt::sum(1.1, 3.0f, 3);
 
-    //     REQUIRE(dbl_sum == Catch::Approx(7.1));
-    //     static_assert(is_same<double, decltype(dbl_sum)>::value, "Error");
-    // }
+        REQUIRE(dbl_sum == Catch::Approx(7.1));
+        static_assert(is_same<double, decltype(dbl_sum)>::value, "Error");
+    }
 
-    // SECTION("for strings")
-    // {
-    //     auto text = vt::sum("Hello", string("world"), "!");
+    SECTION("for strings")
+    {
+        auto text = vt::sum("Hello", string("world"), "!");
 
-    //     REQUIRE(text == "Helloworld!");
-    //     static_assert(is_same<string, decltype(text)>::value, "Error");
-    // }
+        REQUIRE(text == "Helloworld!");
+        static_assert(is_same<string, decltype(text)>::value, "Error");
+    }
 }
 
 ///////////////////////////////////////////////

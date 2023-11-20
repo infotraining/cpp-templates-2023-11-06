@@ -33,7 +33,7 @@ TEST_CASE("accumulate - 1")
 
     auto result = Step1::accumulate(begin(data), end(data));
 
-    // CHECK(result == 32640);  // should be 1 + 2 + 3 + ... + 255 = 32640 (uint8_t overflow)
+    CHECK(result == 32640); // should be 1 + 2 + 3 + ... + 255 = 32640 (uint8_t overflow)
 }
 
 namespace Step2
@@ -88,20 +88,20 @@ namespace Step3
     template <typename T>
     struct AccumulationTraits;
 
-    template <>
-    struct AccumulationTraits<uint8_t>
+    template <std::integral T>
+    struct AccumulationTraits<T>
     {
     public:
-        typedef int AccumulatorType;
+        typedef std::intmax_t AccumulatorType;
         static constexpr AccumulatorType const zero = 0;
     };
 
-    template <>
-    struct AccumulationTraits<int>
+    template <std::floating_point T>
+    struct AccumulationTraits<T>
     {
     public:
-        typedef long AccumulatorType;
-        static constexpr AccumulatorType zero = 0;
+        typedef double AccumulatorType;
+        static constexpr AccumulatorType const zero = 0.0;
     };
 
     template <typename T>
@@ -109,7 +109,7 @@ namespace Step3
     {
         using AccT = typename AccumulationTraits<T>::AccumulatorType;
 
-        AccT total = AccumulationTraits<T>::zero; // usint zero defined in a traits class
+        AccT total = AccumulationTraits<T>::zero; // using zero defined in a traits class
 
         while (begin != end)
         {
@@ -245,7 +245,7 @@ struct MultiplyPolicy
     }
 };
 
-TEST_CASE("accuumulate - 5")
+TEST_CASE("accumulate - 5")
 {
     using namespace std;
 
@@ -253,7 +253,111 @@ TEST_CASE("accuumulate - 5")
 
     iota(begin(data), end(data), 1);
 
-    auto result = Step5::accumulate(begin(data), end(data));
+    auto result = Step5::accumulate<uint8_t, MultiplyPolicy, MultiplyAccumulationTraits>(begin(data), end(data));
 
     cout << "result: " << static_cast<int>(result) << endl;
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// dynamic polymorphism
+
+namespace DynamicPoly
+{
+
+    class Service
+    {
+    public:
+        virtual ~Service() = default;
+        virtual std::string run() = 0;
+    };
+
+    class AService : public Service
+    {
+    public:
+        std::string run() override
+        {
+            return "AService runs...";
+        }
+    };
+
+    class AnotherService : public Service
+    {
+    public:
+        std::string run() override
+        {
+            return "AnotherService runs...";
+        }
+    };
+
+    class User
+    {
+        std::unique_ptr<Service> srv_;
+
+    public:
+        User(std::unique_ptr<Service> srv)
+            : srv_(std::move(srv))
+        { }
+
+        void use()
+        {
+            std::cout << srv_->run() << "\n";
+        }
+    };
+} // namespace DynamicPoly
+
+namespace StaticPoly
+{
+    template<typename T>
+    concept Service = requires(T srv) {
+        { srv.run() } -> std::same_as<std::string>;
+    };
+
+    class AService
+    {
+    public:
+        std::string run()
+        {
+            return "AService runs...";
+        }
+    };
+
+    class AnotherService
+    {
+    public:
+        std::string run()
+        {
+            return "AnotherService runs...";
+        }
+    };
+
+    static_assert(Service<AnotherService>);
+
+    template <Service TService>
+    class User
+    {
+        TService srv_;
+
+    public:
+        User(TService srv)
+            : srv_(std::move(srv))
+        { }
+
+        void use()
+        {
+            std::cout << srv_.run() << "\n";
+        }
+    };
+} // namespace DynamicPoly
+
+TEST_CASE("dynamic poly")
+{
+    DynamicPoly::User user1(std::make_unique<DynamicPoly::AnotherService>());
+    user1.use();
+
+    StaticPoly::User<StaticPoly::AService> user2{StaticPoly::AService()}; // Classic styleSer
+    user2.use();
+
+    StaticPoly::User user3{StaticPoly::AnotherService()}; // CTAD
+    user3.use();
+}
+
