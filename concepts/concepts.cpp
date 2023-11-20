@@ -2,6 +2,8 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <algorithm>
+#include <list>
 
 using namespace std::literals;
 
@@ -96,7 +98,7 @@ TEST_CASE("concepts")
     int x = -10;
     int y = 20;
 
-    std::integral auto result1 = max_value(&x, &y); // std::integral<decltype(result)>
+    std::integral auto result1 = max_value(&x, &y);                // std::integral<decltype(result)>
     std::convertible_to<int64_t> auto result2 = max_value(&x, &y); // std::convertible_to<decltype(result), int64_t>
     CHECK(result1 == result2);
 
@@ -141,8 +143,7 @@ concept Addable = requires(T a, T b) {
 };
 
 template <typename T>
-concept BigType = requires 
-{
+concept BigType = requires {
     requires sizeof(T) > 8; // now evaluated to bool
 };
 
@@ -159,7 +160,141 @@ static_assert(HasValueType<int[10]> == false);
 
 template <typename T>
 concept Hashable = requires(T obj) {
-    { std::hash<T>{}(obj) } -> std::convertible_to<uint64_t>;
+    {
+        std::hash<T>{}(obj)
+    } -> std::convertible_to<uint64_t>;
 };
 
 static_assert(Hashable<std::string>);
+
+std::integral auto multiply(std::integral auto x, std::integral auto y)
+    requires std::same_as<decltype(x), decltype(y)>
+{
+    return x * y;
+}
+
+namespace Alt
+{
+    template <typename T>
+        requires std::integral<T>
+    std::integral auto multiply(T x, T y)
+    {
+        return x * y;
+    }
+
+    namespace Shorter
+    {
+        template <std::integral T>
+        std::integral auto multiply(T x, T y)
+        {
+            return x * y;
+        }
+    } // namespace Shorter
+} // namespace Alt
+
+///////////////////////////////////////////////////////////////////
+// Subsumation
+
+struct BoundingBox
+{
+    int w, h;
+};
+
+struct Color
+{
+    int r, g, b;
+};
+
+template <typename T>
+concept Shape = requires(T obj) {
+    { obj.box() } -> std::same_as<BoundingBox>;
+    obj.draw();
+};
+
+template <typename T>
+concept ShapeWithColor = Shape<T> && requires(T obj, Color c) {
+    obj.set_color(c);
+    { obj.get_color() } -> std::convertible_to<Color>;
+};
+
+template <typename T>
+concept ShapeWithShading = ShapeWithColor<T> && requires(T obj, Color c) {
+    obj.shade();
+};
+
+struct Rect
+{
+    int width, height;
+    Color color{};
+
+    BoundingBox box() const
+    {
+        return {width, height};
+    }
+
+    void draw() const
+    {
+        std::cout << "Drawing Rect: " << width << ", " << height << "\n";
+    }
+
+    void set_color(Color new_color)
+    {
+        std::cout << "Setting color...\n";
+        color = new_color;
+    }
+
+    Color get_color() const
+    {
+        return color;
+    }
+
+    void shade() 
+    {
+        std::cout << "Shading rect...\n";
+    }
+};
+
+static_assert(Shape<Rect>);
+static_assert(ShapeWithColor<Rect>);
+
+void render(Shape auto shp)
+{
+    shp.draw();
+}
+
+void render(ShapeWithColor auto shp)
+{
+    shp.set_color(Color{0, 0, 0});
+    shp.draw();
+}
+
+void render(ShapeWithShading auto shp)
+{
+    shp.shade();
+    shp.draw();
+}
+
+TEST_CASE("subsuming concepts")
+{
+    Rect rect{10, 20};
+    render(rect);
+}
+
+void my_sort(std::ranges::random_access_range auto container)
+{
+    std::sort(container.begin(), container.end());
+}
+
+void my_sort(std::ranges::bidirectional_range auto container)
+{
+    container.sort();
+}
+
+TEST_CASE("sorting & subsuming")
+{
+    std::vector vec = {42, 1, 665};
+    my_sort(vec);
+
+    std::list lst = {42, 1, 665};
+    my_sort(lst);
+}
