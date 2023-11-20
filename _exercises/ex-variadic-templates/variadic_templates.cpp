@@ -221,7 +221,7 @@ namespace vt
 
 TEST_CASE("tuple_apply")
 {
-    std::tuple tpl{1, 3.14, "text"s};
+    std::tuple tpl{1, 3.14, "text"s}; // 0, 1, 2
 
     vt::tuple_apply([](const auto& item) { std::cout << "item: " << item << "\n"; }, tpl);
 }
