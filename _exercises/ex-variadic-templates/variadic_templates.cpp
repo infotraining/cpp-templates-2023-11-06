@@ -100,6 +100,7 @@ TEST_CASE("call_n_times wrapper")
     // };
 
     // vt::call_n_times(5, func, 1, "one"s); // TODO - it should call 5 times func function with the following argument (5 x func(1, "one"s))
+    // vt::call_n_times<5>(func, 1, "one"s); // TODO - it should call 5 times func function with the following argument (5 x func(1, "one"s))
 
     // REQUIRE(counter == 5);
     // REQUIRE(results.size() == 5);
@@ -116,6 +117,8 @@ namespace vt
 
 TEST_CASE("make_vector - create vector from a list of arguments")
 {
+    //const std::vector<std::unique_ptr<int>> vec = { std::make_unique<int>(13) };
+
     // SECTION("ints")
     // {
     //     std::vector<int> v = vt::make_vector(1, 2, 3);
